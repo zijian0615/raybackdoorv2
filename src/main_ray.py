@@ -125,22 +125,30 @@ class ReconEvaluator:
         correct_total = 0
         total_samples = 0
 
+        # with torch.no_grad():
+        #     for images, labels, masks in self.loader:
+        #         images = images.to(self.device)
+        #         labels = labels.to(self.device)
+        #         masks = masks.to(self.device)
+
+        #         # VAE 重建 + mask 融合
+        #         recon = self.vae(images)
+        #         fused = masks * recon + (1 - masks) * images
+
+        #         # 分类预测
+        #         outputs = self.model(fused)
+        #         _, predicted = outputs.max(1)
+
+        #         correct_total += (predicted == labels).sum().item()
+        #         total_samples += labels.size(0)
         with torch.no_grad():
-            for images, labels, masks in self.loader:
-                images = images.to(self.device)
-                labels = labels.to(self.device)
-                masks = masks.to(self.device)
+            for i, (images, labels, masks) in enumerate(self.loader):
+                print(f"Batch {i}:")
+                print("  images:", images.shape, images.dtype)
+                print("  recon:", self.vae(images).shape)  # 临时查看
+                print("  masks:", masks.shape, masks.dtype)
+                break  # 只打印第一 batch，避免输出太多
 
-                # VAE 重建 + mask 融合
-                recon = self.vae(images)
-                fused = masks * recon + (1 - masks) * images
-
-                # 分类预测
-                outputs = self.model(fused)
-                _, predicted = outputs.max(1)
-
-                correct_total += (predicted == labels).sum().item()
-                total_samples += labels.size(0)
 
         acc = correct_total / total_samples
         return acc
