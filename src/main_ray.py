@@ -202,6 +202,8 @@ class PoisonedReconActorCPU:
         
             with torch.no_grad():
                 recon = self.vae(images)
+                print(f"[DEBUG] recon: shape={recon.shape}, dtype={recon.dtype}")
+
                 recon_masked = masks * recon + (1 - masks) * images
 
 
