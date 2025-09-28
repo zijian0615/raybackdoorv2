@@ -10,7 +10,7 @@ class GradCAMDataset(Dataset):
         Args:
             images: torch.Tensor, shape [N, C, H, W]
             labels: torch.Tensor, shape [N]
-            masks:  numpy.ndarray or torch.Tensor, shape [N, H, W]
+            masks:  numpy.ndarray or torch.Tensor, shape [N, H, W] 或 [N, C, H, W]
         """
         self.images = images
         self.labels = labels
@@ -42,7 +42,7 @@ class GradCAMLoader:
         self.target_layer_name = target_layer_name
 
     def _get_target_layer(self):
-        # 仅支持 ResNet18，选择对应的 layer
+        # 仅支持 ResNet18
         if self.target_layer_name == 'layer3':
             return self.model.layer3[-1]
         elif self.target_layer_name == 'layer4':
@@ -51,32 +51,45 @@ class GradCAMLoader:
             raise ValueError("Unsupported target_layer_name. Use 'layer3' or 'layer4'.")
 
     def get_gradcam_loader(self):
-        """生成 Grad-CAM masks 并返回 DataLoader"""
+        """生成整个 dataset 的 Grad-CAM masks 并返回 DataLoader"""
         self.model.eval()
         target_layer = self._get_target_layer()
         cam = GradCAM(model=self.model, target_layers=[target_layer])
 
-        # 获取一批图像
-        images, labels = next(iter(self.dataloader))
-        images = images.to(self.device)
-        labels = labels.to(self.device)
-        images.requires_grad_(True)
+        all_images_list = []
+        all_labels_list = []
+        all_masks_list = []
 
-        # 预测
-        outputs = self.model(images)
-        predictions = torch.argmax(outputs, dim=1)
+        # 遍历整个原始 DataLoader
+        for images, labels in self.dataloader:
+            images = images.to(self.device).float()       # 保证 float32
+            labels = labels.to(self.device)
+            images.requires_grad_(True)                   # 开启梯度
 
-        # Grad-CAM 目标
-        targets = [ClassifierOutputTarget(int(predictions[i].detach())) for i in range(len(predictions))]
-        grayscale_cams = cam(input_tensor=images, targets=targets)  # numpy: [B, H, W]
+            # 预测
+            outputs = self.model(images)
+            predictions = torch.argmax(outputs, dim=1)
 
-        # 生成 mask
-        masks = (grayscale_cams >= self.threshold).astype(np.float32)
-        masks = torch.from_numpy(masks)          # 转成 tensor
-        masks = masks.unsqueeze(1).repeat(1, 3, 1, 1)  # [B, 1, H, W] -> [B, 3, H, W]
+            # Grad-CAM 目标
+            targets = [ClassifierOutputTarget(int(pred.detach())) for pred in predictions]
+            grayscale_cams = cam(input_tensor=images, targets=targets)  # numpy: [B, H, W]
+
+            # 生成 mask
+            masks = (grayscale_cams >= self.threshold).astype(np.float32)
+            masks = torch.from_numpy(masks)
+            masks = masks.unsqueeze(1).repeat(1, 3, 1, 1)  # [B, 1, H, W] -> [B, 3, H, W]
+
+            all_images_list.append(images.cpu())
+            all_labels_list.append(labels.cpu())
+            all_masks_list.append(masks.cpu())
+
+        # 拼接整个 dataset
+        all_images = torch.cat(all_images_list, dim=0)
+        all_labels = torch.cat(all_labels_list, dim=0)
+        all_masks = torch.cat(all_masks_list, dim=0)
 
         # 构建 Dataset + DataLoader
-        gradcam_dataset = GradCAMDataset(images.cpu(), labels.cpu(), masks.cpu())
+        gradcam_dataset = GradCAMDataset(all_images, all_labels, all_masks)
         gradcam_dataloader = DataLoader(gradcam_dataset, batch_size=self.dataloader.batch_size, shuffle=False)
 
         return gradcam_dataloader

@@ -107,7 +107,8 @@ class PoisonedReconPipeline:
         return self.recon_evaluator.test_accuracy()
 
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+#BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 model_ckpt_path = os.path.join(BASE_DIR, "resnet18_badnet_epoch40.pth")
 vae_ckpt_path = os.path.join(BASE_DIR, "vaemodel", "datacifar10_latent1024_epoch1200.pth")
