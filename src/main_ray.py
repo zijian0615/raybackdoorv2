@@ -100,22 +100,20 @@ from vae import FlexibleVAE
 # 连接已有 Ray 集群
 ray.init(address="auto")
 
-# ---------------------
-# 模型和 VAE checkpoint
 MODEL_CKPT = "/home/ray/raybackdoorv1/resnet18_badnet_epoch40.pth"
 VAE_CKPT = "/home/ray/raybackdoorv1/vaemodel/datacifar10_latent1024_epoch1200.pth"
 
-# 检查文件是否存在
 assert os.path.exists(MODEL_CKPT), f"Model checkpoint not found: {MODEL_CKPT}"
 assert os.path.exists(VAE_CKPT), f"VAE checkpoint not found: {VAE_CKPT}"
 
-# ---------------------
 @ray.remote
 class PoisonedReconActorCPU:
     def __init__(self, model_ckpt, vae_ckpt, latent_dim=1024, input_size=32):
         import ray
-        ctx = ray.get_runtime_context()
-        self.node_ip = ctx.node_ip
+        from ray._private.services import get_node_ip_address
+
+        # 获取 Actor 所在节点 IP
+        self.node_ip = get_node_ip_address()
         print(f"[Init] Actor initialized on Node IP: {self.node_ip}")
 
         self.device = 'cpu'
@@ -136,12 +134,11 @@ class PoisonedReconActorCPU:
 
     def run_pipeline(self, dataset_root="/home/ray/raybackdoorv1/data", target_label=0, trigger_size=3,
                      gradcam_layer='layer3', gradcam_threshold=0.8, batch_size=16):
-        import ray
-        ctx = ray.get_runtime_context()
-        node_ip = ctx.node_ip
+        from ray._private.services import get_node_ip_address
+        node_ip = get_node_ip_address()
         print(f"[Run] run_pipeline executing on Node IP: {node_ip}")
 
-        # 数据加载和处理
+        # 数据加载
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
@@ -168,8 +165,8 @@ class PoisonedReconActorCPU:
         acc = recon_evaluator.test_accuracy()
         return acc, node_ip
 
+
 # ---------------------
-# 初始化多个 Actor（根据需要调整数量）
 NUM_ACTORS = 2
 actors = [
     PoisonedReconActorCPU.options(num_cpus=1, memory=0.5*1024*1024*1024).remote(
@@ -183,7 +180,7 @@ actors = [
 # 执行 pipeline
 results = ray.get([actor.run_pipeline.remote() for actor in actors])
 
-# 输出每个 Actor 的结果和 Pod IP
 for i, (acc, node_ip) in enumerate(results):
     print(f"Actor {i} ran on Node IP: {node_ip}, Accuracy: {acc}")
+
 
