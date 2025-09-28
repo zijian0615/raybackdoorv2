@@ -209,17 +209,28 @@ class PoisonedReconActorCPU:
 
 # -----------------------------
 # 初始化 CPU Actor
-actor = PoisonedReconActorCPU.options(
-    num_cpus=1,
-    memory=0.5 * 1024 * 1024 * 1024  # 0.5GB
-).remote(
-    model_ckpt=MODEL_CKPT,
-    vae_ckpt=VAE_CKPT,
-    latent_dim=1024,
-    input_size=32
-)
+# actor = PoisonedReconActorCPU.options(
+#     num_cpus=1,
+#     memory=0.5 * 1024 * 1024 * 1024  # 0.5GB
+# ).remote(
+#     model_ckpt=MODEL_CKPT,
+#     vae_ckpt=VAE_CKPT,
+#     latent_dim=1024,
+#     input_size=32
+# )
 
 #
-#
-acc_result = ray.get(actor.run_pipeline.remote())
-print("Accuracy on reconstructed dataset:", acc_result)
+num_actors = 4
+actors = [
+    PoisonedReconActorCPU.options(num_cpus=1, memory=0.5*1024*1024*1024)
+    .remote(model_ckpt=MODEL_CKPT, vae_ckpt=VAE_CKPT)
+    for _ in range(num_actors)
+]
+
+# 并行运行
+futures = [actor.run_pipeline.remote() for actor in actors]
+results = ray.get(futures)
+print("All accuracies:", results)
+
+# acc_result = ray.get(actor.run_pipeline.remote())
+# print("Accuracy on reconstructed dataset:", acc_result)
