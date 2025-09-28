@@ -201,10 +201,13 @@ class PoisonedReconActorCPU:
                 print(f"  [ERROR] masks * images failed: {e}")
         
             with torch.no_grad():
-                recon = self.vae(images)
+                recon_out = self.vae(images)   # 可能是 tuple
+                recon = recon_out[0]           # 取重建图像
                 print(f"[DEBUG] recon: shape={recon.shape}, dtype={recon.dtype}")
-
+            
+                # mask 融合
                 recon_masked = masks * recon + (1 - masks) * images
+
 
 
 
