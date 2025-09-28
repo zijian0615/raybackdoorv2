@@ -157,10 +157,12 @@ class PoisonedReconActorCPU:
                                            device=self.device, target_layer_name=gradcam_layer,
                                            threshold=gradcam_threshold)
         gradcam_testloader = gradcam_loader_obj.get_gradcam_loader()
-    
+        num_batches = len(gradcam_testloader)
+        print(f"[DEBUG] gradcam_testloader contains {num_batches} batches")
+
         # VAE 重建 + mask 融合
         recon_images_list, labels_list = [], []
-    
+        
         for batch_idx, batch in enumerate(gradcam_testloader):
             images, labels, masks = batch
         
