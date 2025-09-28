@@ -72,9 +72,11 @@ class GradCAMLoader:
 
         # 生成 mask
         masks = (grayscale_cams >= self.threshold).astype(np.float32)
+        masks = torch.from_numpy(masks)          # 转成 tensor
+        masks = masks.unsqueeze(1).repeat(1, 3, 1, 1)  # [B, 1, H, W] -> [B, 3, H, W]
 
         # 构建 Dataset + DataLoader
-        gradcam_dataset = GradCAMDataset(images.cpu(), labels.cpu(), masks)
+        gradcam_dataset = GradCAMDataset(images.cpu(), labels.cpu(), masks.cpu())
         gradcam_dataloader = DataLoader(gradcam_dataset, batch_size=self.dataloader.batch_size, shuffle=False)
 
         return gradcam_dataloader
