@@ -107,10 +107,15 @@ class PoisonedReconPipeline:
         return self.recon_evaluator.test_accuracy()
 
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+model_ckpt_path = os.path.join(BASE_DIR, "resnet18_badnet_epoch40.pth")
+vae_ckpt_path = os.path.join(BASE_DIR, "vaemodel", "datacifar10_latent1024_epoch1200.pth")
+
 pipeline = PoisonedReconPipeline(
     testloader=testloader,
-    model_ckpt="./resnet18_badnet_epoch40.pth",
-    vae_ckpt="./vaemodel/datacifar10_latent1024_epoch1200.pth",
+    model_ckpt=model_ckpt_path,
+    vae_ckpt=vae_ckpt_path,
     latent_dim=1024,
     input_size=32,
     target_label=0,
