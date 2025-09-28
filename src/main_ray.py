@@ -161,33 +161,49 @@ class PoisonedReconActorCPU:
         # VAE 重建 + mask 融合
         recon_images_list, labels_list = [], []
     
-        for batch in gradcam_testloader:
+        for batch_idx, batch in enumerate(gradcam_testloader):
             images, labels, masks = batch
         
-            # 如果 masks 是 tuple/list，取第0个
+            # 打印类型和 shape
+            print(f"[DEBUG] batch_idx={batch_idx}")
+            print(f"  images: type={type(images)}, shape={getattr(images, 'shape', None)}, dtype={getattr(images, 'dtype', None)}")
+            print(f"  labels: type={type(labels)}, shape={getattr(labels, 'shape', None)}, dtype={getattr(labels, 'dtype', None)}")
+            print(f"  masks: type={type(masks)}, shape={getattr(masks, 'shape', None)}, dtype={getattr(masks, 'dtype', None)}")
+        
+            # 如果 masks 是 tuple 或 list，取第 0 个
             if isinstance(masks, (tuple, list)):
+                print(f"  [DEBUG] masks is tuple/list, taking masks[0]")
                 masks = masks[0]
         
-            # 转为 tensor，并转换 dtype
+            # 转为 tensor
             if not torch.is_tensor(masks):
+                print(f"  [DEBUG] masks not tensor, converting to tensor")
                 masks = torch.tensor(masks, dtype=torch.float32)
             else:
                 masks = masks.float()
         
-            # 如果 masks 是 [B, H, W]，扩展到 [B, C, H, W]
-            if masks.dim() == 3:
+            # 扩展 shape
+            if masks.dim() == 3:  # [B, H, W] -> [B, C, H, W]
                 masks = masks.unsqueeze(1).repeat(1, images.size(1), 1, 1)
         
+            print(f"  [DEBUG] masks after processing: type={type(masks)}, shape={masks.shape}, dtype={masks.dtype}")
+        
+            # 送到设备
             images = images.to(self.device)
             masks = masks.to(images.dtype).to(self.device)
             labels = labels.to(self.device)
         
+            # 测试 mask * images 是否可行
+            try:
+                test = masks * images
+                print(f"  [DEBUG] masks * images OK")
+            except Exception as e:
+                print(f"  [ERROR] masks * images failed: {e}")
+        
             with torch.no_grad():
                 recon = self.vae(images)
                 recon_masked = masks * recon + (1 - masks) * images
-        
-            recon_images_list.append(recon_masked)
-            labels_list.append(labels)
+
 
 
     
