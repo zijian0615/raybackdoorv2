@@ -123,7 +123,7 @@ pipeline = PoisonedReconPipeline(
     gradcam_layer='layer3',
     gradcam_threshold=0.8,
     batch_size=128,
-    device='cuda'
+    device='cpu'
 )
 
 recon_loader = pipeline.get_recon_loader()
