@@ -109,10 +109,8 @@ assert os.path.exists(VAE_CKPT), f"VAE checkpoint not found: {VAE_CKPT}"
 @ray.remote
 class PoisonedReconActorCPU:
     def __init__(self, model_ckpt, vae_ckpt, latent_dim=1024, input_size=32):
-        import ray
         from ray._private.services import get_node_ip_address
 
-        # 获取 Actor 所在节点 IP
         self.node_ip = get_node_ip_address()
         print(f"[Init] Actor initialized on Node IP: {self.node_ip}")
 
@@ -162,8 +160,22 @@ class PoisonedReconActorCPU:
         recon_evaluator = ReconEvaluator(self.model, self.vae, gradcam_testloader,
                                          device=self.device, batch_size=batch_size)
 
-        acc = recon_evaluator.test_accuracy()
-        return acc, node_ip
+        # -------------------------------
+        # 遍历整个 DataLoader 计算整体准确率
+        total_correct = 0
+        total_samples = 0
+        for batch in gradcam_testloader:
+            # 假设 batch 返回 images 和 labels
+            images, labels = batch
+            with torch.no_grad():
+                reconstructed = recon_evaluator.reconstruct(images)  # 用 VAE + mask 重建
+                outputs = self.model(reconstructed)
+                preds = torch.argmax(outputs, dim=1)
+                total_correct += (preds == labels).sum().item()
+                total_samples += labels.size(0)
+
+        overall_acc = total_correct / total_samples
+        return overall_acc, node_ip
 
 
 # ---------------------
@@ -181,6 +193,7 @@ actors = [
 results = ray.get([actor.run_pipeline.remote() for actor in actors])
 
 for i, (acc, node_ip) in enumerate(results):
-    print(f"Actor {i} ran on Node IP: {node_ip}, Accuracy: {acc}")
+    print(f"Actor {i} ran on Node IP: {node_ip}, Accuracy on full dataset: {acc:.4f}")
+
 
 
