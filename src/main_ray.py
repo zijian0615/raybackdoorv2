@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from torchvision.models import resnet18
 import torchvision
 import torchvision.transforms as transforms
+import os
 
 from getBadnet import PoisonedTestLoader
 from getSaliency import GradCAMLoader
@@ -11,6 +12,14 @@ from calASR import ReconEvaluator
 from vae import FlexibleVAE
 
 ray.init(address="auto")  # 连接已有集群
+
+# 使用绝对路径
+MODEL_CKPT = "/home/ray/raybackdoorv1/resnet18_badnet_epoch40.pth"
+VAE_CKPT = "/home/ray/raybackdoorv1/vaemodel/datacifar10_latent1024_epoch1200.pth"
+
+# 检查文件是否存在
+assert os.path.exists(MODEL_CKPT), f"Model checkpoint not found: {MODEL_CKPT}"
+assert os.path.exists(VAE_CKPT), f"VAE checkpoint not found: {VAE_CKPT}"
 
 @ray.remote
 class PoisonedReconActorCPU:
@@ -21,15 +30,17 @@ class PoisonedReconActorCPU:
         num_classes = 10
         self.model = resnet18(pretrained=False)
         self.model.fc = torch.nn.Linear(self.model.fc.in_features, num_classes)
+        print(f"Loading model from {model_ckpt} ...")
         self.model.load_state_dict(torch.load(model_ckpt, map_location='cpu'))
         self.model.to(self.device)
 
         # VAE
         self.vae = FlexibleVAE(latent_dim=latent_dim, input_size=input_size).to(self.device)
+        print(f"Loading VAE from {vae_ckpt} ...")
         self.vae.load_state_dict(torch.load(vae_ckpt, map_location='cpu'))
         self.vae.eval()
 
-    def run_pipeline(self, dataset_root="./data", target_label=0, trigger_size=3,
+    def run_pipeline(self, dataset_root="/home/ray/raybackdoorv1/data", target_label=0, trigger_size=3,
                      gradcam_layer='layer3', gradcam_threshold=0.8, batch_size=128):
         # 在 Actor 内重新构建 DataLoader
         transform = transforms.Compose([
@@ -61,8 +72,8 @@ class PoisonedReconActorCPU:
 # ---------------------
 # 初始化 CPU Actor
 actor = PoisonedReconActorCPU.remote(
-    model_ckpt="./resnet18_badnet_epoch40.pth",
-    vae_ckpt="./vaemodel/datacifar10_latent1024_epoch1200.pth",
+    model_ckpt=MODEL_CKPT,
+    vae_ckpt=VAE_CKPT,
     latent_dim=1024,
     input_size=32
 )
