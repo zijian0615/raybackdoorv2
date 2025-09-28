@@ -14,7 +14,7 @@ from vae import FlexibleVAE
 import torchvision
 import torchvision.transforms as transforms
 from getBadnet import PoisonedTestLoader
-
+import os
 
 dataset_choice = 'cifar10'
 
