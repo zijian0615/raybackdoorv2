@@ -143,11 +143,18 @@ class ReconEvaluator:
         #         total_samples += labels.size(0)
         with torch.no_grad():
             for i, (images, labels, masks) in enumerate(self.loader):
+                images = images.to(self.device)
+                labels = labels.to(self.device)
+                masks = masks.to(self.device)
+                
+                recon_tuple = self.vae(images)
+                recon = recon_tuple[0]  # 取重建图像部分
                 print(f"Batch {i}:")
                 print("  images:", images.shape, images.dtype)
-                print("  recon:", self.vae(images).shape)  # 临时查看
+                print("  recon:", recon.shape, recon.dtype)
                 print("  masks:", masks.shape, masks.dtype)
-                break  # 只打印第一 batch，避免输出太多
+                break  # 只打印第一 batch
+
 
 
         acc = correct_total / total_samples
