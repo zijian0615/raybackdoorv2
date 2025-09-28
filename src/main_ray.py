@@ -177,15 +177,15 @@ class PoisonedReconActorCPU:
                 print(f"  [DEBUG] masks is tuple/list, taking masks[0]")
                 masks = masks[0]
         
-            # 转为 tensor
+            # 转为 tensor 并 float
             if not torch.is_tensor(masks):
                 print(f"  [DEBUG] masks not tensor, converting to tensor")
                 masks = torch.tensor(masks, dtype=torch.float32)
             else:
                 masks = masks.float()
         
-            # 扩展 shape
-            if masks.dim() == 3:  # [B, H, W] -> [B, C, H, W]
+            # 扩展 shape [B, H, W] -> [B, C, H, W]
+            if masks.dim() == 3:
                 masks = masks.unsqueeze(1).repeat(1, images.size(1), 1, 1)
         
             print(f"  [DEBUG] masks after processing: type={type(masks)}, shape={masks.shape}, dtype={masks.dtype}")
@@ -202,13 +202,25 @@ class PoisonedReconActorCPU:
             except Exception as e:
                 print(f"  [ERROR] masks * images failed: {e}")
         
+            # 计算 VAE 重建
             with torch.no_grad():
-                recon_out = self.vae(images)   # 可能是 tuple
-                recon = recon_out[0]           # 取重建图像
+                recon_out = self.vae(images)
+                
+                # 兼容 tuple 或直接返回 tensor 的情况
+                if isinstance(recon_out, tuple) or isinstance(recon_out, list):
+                    recon = recon_out[0]
+                else:
+                    recon = recon_out
+        
                 print(f"[DEBUG] recon: shape={recon.shape}, dtype={recon.dtype}")
-            
+        
                 # mask 融合
                 recon_masked = masks * recon + (1 - masks) * images
+        
+            # 保存结果
+            recon_images_list.append(recon_masked)
+            labels_list.append(labels)
+
 
 
 
