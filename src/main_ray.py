@@ -177,7 +177,7 @@ class PoisonedReconActorCPU:
         self.vae.eval()
 
     def run_pipeline(self, dataset_root="/home/ray/raybackdoorv1/data", target_label=0, trigger_size=3,
-                     gradcam_layer='layer3', gradcam_threshold=0.8, batch_size=2):
+                     gradcam_layer='layer3', gradcam_threshold=0.8, batch_size=512):
         # -----------------------------
         # 构建 DataLoader
         transform = transforms.Compose([
