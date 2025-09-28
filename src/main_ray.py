@@ -220,7 +220,7 @@ class PoisonedReconActorCPU:
 # )
 
 #
-num_actors = 2
+num_actors = 1
 actors = [
     PoisonedReconActorCPU.options(num_cpus=1, memory=0.5*1024*1024*1024)
     .remote(model_ckpt=MODEL_CKPT, vae_ckpt=VAE_CKPT)
