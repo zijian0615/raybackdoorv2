@@ -162,13 +162,19 @@ class PoisonedReconActorCPU:
         recon_images_list, labels_list = [], []
     
         for batch in gradcam_testloader:
-            images, labels, masks = batch  # 解包
+            images, labels, masks = batch
         
-            # 如果 masks 是 tuple 或 list，就取第一个元素
+            # 如果 masks 是 tuple/list，取第0个
             if isinstance(masks, (tuple, list)):
                 masks = masks[0]
         
-            # 如果 masks 维度是 [B, H, W]，扩展到 [B, 3, H, W]
+            # 转为 tensor，并转换 dtype
+            if not torch.is_tensor(masks):
+                masks = torch.tensor(masks, dtype=torch.float32)
+            else:
+                masks = masks.float()
+        
+            # 如果 masks 是 [B, H, W]，扩展到 [B, C, H, W]
             if masks.dim() == 3:
                 masks = masks.unsqueeze(1).repeat(1, images.size(1), 1, 1)
         
@@ -182,6 +188,7 @@ class PoisonedReconActorCPU:
         
             recon_images_list.append(recon_masked)
             labels_list.append(labels)
+
 
     
         # 拼接所有 batch
