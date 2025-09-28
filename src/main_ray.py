@@ -41,7 +41,7 @@ class PoisonedReconActorCPU:
         self.vae.eval()
 
     def run_pipeline(self, dataset_root="/home/ray/raybackdoorv1/data", target_label=0, trigger_size=3,
-                     gradcam_layer='layer3', gradcam_threshold=0.8, batch_size=128):
+                     gradcam_layer='layer3', gradcam_threshold=0.8, batch_size=4):
         # 在 Actor 内重新构建 DataLoader
         transform = transforms.Compose([
             transforms.ToTensor(),
@@ -78,7 +78,7 @@ actor = PoisonedReconActorCPU.options(
     model_ckpt=MODEL_CKPT,
     vae_ckpt=VAE_CKPT,
     latent_dim=1024,
-    input_size=4
+    input_size=32
 )
 
 # 运行 pipeline
