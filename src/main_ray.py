@@ -125,22 +125,22 @@ class ReconEvaluator:
         correct_total = 0
         total_samples = 0
 
-    with torch.no_grad():
-        for images, labels, masks in self.loader:
-            images = images.to(self.device)
-            labels = labels.to(self.device)
-            masks = masks.to(self.device).float()  # 转 float
-    
-            recon_tuple = self.vae(images)  # VAE 可能返回 (recon, mu, logvar)
-            recon = recon_tuple[0]          # 只取重建图像部分
-    
-            fused = masks * recon + (1.0 - masks) * images  # mask 融合
-    
-            outputs = self.model(fused)
-            _, predicted = outputs.max(1)
-    
-            correct_total += (predicted == labels).sum().item()
-            total_samples += labels.size(0)
+        with torch.no_grad():
+            for images, labels, masks in self.loader:
+                images = images.to(self.device)
+                labels = labels.to(self.device)
+                masks = masks.to(self.device).float()  # 转 float
+        
+                recon_tuple = self.vae(images)  # VAE 可能返回 (recon, mu, logvar)
+                recon = recon_tuple[0]          # 只取重建图像部分
+        
+                fused = masks * recon + (1.0 - masks) * images  # mask 融合
+        
+                outputs = self.model(fused)
+                _, predicted = outputs.max(1)
+        
+                correct_total += (predicted == labels).sum().item()
+                total_samples += labels.size(0)
 
         # with torch.no_grad():
         #     for i, (images, labels, masks) in enumerate(self.loader):
