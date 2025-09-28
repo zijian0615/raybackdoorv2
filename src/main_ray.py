@@ -172,7 +172,7 @@ class PoisonedReconActorCPU:
 # 初始化多个 Actor（根据需要调整数量）
 NUM_ACTORS = 2
 actors = [
-    PoisonedReconActorCPU.options(num_cpus=1, memory=2*1024*1024*1024).remote(
+    PoisonedReconActorCPU.options(num_cpus=1, memory=0.5*1024*1024*1024).remote(
         model_ckpt=MODEL_CKPT,
         vae_ckpt=VAE_CKPT,
         latent_dim=1024,
