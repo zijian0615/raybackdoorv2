@@ -162,19 +162,27 @@ class PoisonedReconActorCPU:
         recon_images_list, labels_list = [], []
     
         for batch in gradcam_testloader:
-            # 改正解包方式
-            images, labels, masks = batch  # 现在 gradcam_loader 每个 batch 返回 3 个元素
-    
-            # 这里可以直接把 images, masks 送到 VAE + mask 融合
+            images, labels, masks = batch  # 解包
+        
+            # 如果 masks 是 tuple 或 list，就取第一个元素
+            if isinstance(masks, (tuple, list)):
+                masks = masks[0]
+        
+            # 如果 masks 维度是 [B, H, W]，扩展到 [B, 3, H, W]
+            if masks.dim() == 3:
+                masks = masks.unsqueeze(1).repeat(1, images.size(1), 1, 1)
+        
+            images = images.to(self.device)
+            masks = masks.to(images.dtype).to(self.device)
+            labels = labels.to(self.device)
+        
             with torch.no_grad():
                 recon = self.vae(images)
-                # mask 融合
-                #recon_masked = masks * recon + (1 - masks) * images
-                recon_masked = masks.to(recon.dtype) * recon + (1 - masks.to(recon.dtype)) * images
-
-    
+                recon_masked = masks * recon + (1 - masks) * images
+        
             recon_images_list.append(recon_masked)
             labels_list.append(labels)
+
     
         # 拼接所有 batch
         recon_images_all = torch.cat(recon_images_list, dim=0)
