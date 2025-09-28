@@ -169,7 +169,9 @@ class PoisonedReconActorCPU:
             with torch.no_grad():
                 recon = self.vae(images)
                 # mask 融合
-                recon_masked = masks * recon + (1 - masks) * images
+                #recon_masked = masks * recon + (1 - masks) * images
+                recon_masked = masks.to(recon.dtype) * recon + (1 - masks.to(recon.dtype)) * images
+
     
             recon_images_list.append(recon_masked)
             labels_list.append(labels)
