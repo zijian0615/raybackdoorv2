@@ -10,12 +10,12 @@ from getSaliency import GradCAMLoader
 from calASR import ReconEvaluator
 from vae import FlexibleVAE
 
-ray.init()  # CPU-only 集群也可以
+ray.init(address="auto")  # 连接已有集群
 
 @ray.remote
 class PoisonedReconActorCPU:
     def __init__(self, model_ckpt, vae_ckpt, latent_dim=1024, input_size=32):
-        self.device = 'cpu'  # 强制使用 CPU
+        self.device = 'cpu'
 
         # 分类模型
         num_classes = 10
@@ -29,8 +29,17 @@ class PoisonedReconActorCPU:
         self.vae.load_state_dict(torch.load(vae_ckpt, map_location='cpu'))
         self.vae.eval()
 
-    def run_pipeline(self, testloader, target_label=0, trigger_size=3,
+    def run_pipeline(self, dataset_root="./data", target_label=0, trigger_size=3,
                      gradcam_layer='layer3', gradcam_threshold=0.8, batch_size=128):
+        # 在 Actor 内重新构建 DataLoader
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
+                                 std=[0.247, 0.243, 0.261])
+        ])
+        testset = torchvision.datasets.CIFAR10(root=dataset_root, train=False, download=True, transform=transform)
+        testloader = DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=0)
+
         # Poisoned 测试集
         poi_loader_obj = PoisonedTestLoader(testloader, trigger_size=trigger_size,
                                             target_label=target_label, batch_size=batch_size)
@@ -46,20 +55,8 @@ class PoisonedReconActorCPU:
         recon_evaluator = ReconEvaluator(self.model, self.vae, gradcam_testloader,
                                          device=self.device, batch_size=batch_size)
 
-        # 返回重建 DataLoader 和准确率
-        recon_loader = recon_evaluator.get_recon_loader()
         acc = recon_evaluator.test_accuracy()
-        return recon_loader, acc
-
-# ---------------------
-# 准备 CIFAR-10 testloader
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
-                         std=[0.247, 0.243, 0.261])
-])
-testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
-testloader = DataLoader(testset, batch_size=128, shuffle=False, num_workers=2)
+        return acc
 
 # ---------------------
 # 初始化 CPU Actor
@@ -71,7 +68,5 @@ actor = PoisonedReconActorCPU.remote(
 )
 
 # 运行 pipeline
-recon_loader_ref, acc_ref = actor.run_pipeline.remote(testloader)
-recon_loader, acc_result = ray.get([recon_loader_ref, acc_ref])
-
+acc_result = ray.get(actor.run_pipeline.remote())
 print("Accuracy on reconstructed dataset:", acc_result)
