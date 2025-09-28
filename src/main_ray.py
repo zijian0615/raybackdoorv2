@@ -130,58 +130,58 @@ class PoisonedReconActorCPU:
         self.vae.load_state_dict(torch.load(vae_ckpt, map_location='cpu'))
         self.vae.eval()
 
- def run_pipeline(self, dataset_root="/home/ray/raybackdoorv1/data",
-                 target_label=0, trigger_size=3,
-                 gradcam_layer='layer3', gradcam_threshold=0.8,
-                 batch_size=2):
-    from ray._private.services import get_node_ip_address
-    node_ip = get_node_ip_address()
-    print(f"[Run] run_pipeline executing on Node IP: {node_ip}")
-
-    # 数据加载
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
-                             std=[0.247, 0.243, 0.261])
-    ])
-    testset = torchvision.datasets.CIFAR10(root=dataset_root, train=False, download=True, transform=transform)
-    testloader = DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=0)
-
-    # Poisoned 测试集
-    poi_loader_obj = PoisonedTestLoader(testloader, trigger_size=trigger_size,
-                                        target_label=target_label, batch_size=batch_size)
-    poi_testloader = poi_loader_obj.get_poi_testloader()
-
-    # Grad-CAM mask
-    gradcam_loader_obj = GradCAMLoader(self.model, poi_testloader,
-                                       device=self.device, target_layer_name=gradcam_layer,
-                                       threshold=gradcam_threshold)
-    gradcam_testloader = gradcam_loader_obj.get_gradcam_loader()
-
-    # VAE 重建 + mask 融合
-    recon_images_list, labels_list = [], []
-
-    for batch in gradcam_testloader:
-        # 改正解包方式
-        images, labels, masks = batch  # 现在 gradcam_loader 每个 batch 返回 3 个元素
-
-        # 这里可以直接把 images, masks 送到 VAE + mask 融合
-        with torch.no_grad():
-            recon = self.vae(images)
-            # mask 融合
-            recon_masked = masks * recon + (1 - masks) * images
-
-        recon_images_list.append(recon_masked)
-        labels_list.append(labels)
-
-    # 拼接所有 batch
-    recon_images_all = torch.cat(recon_images_list, dim=0)
-    labels_all = torch.cat(labels_list, dim=0)
-
-    # 计算准确率
-    acc = recon_evaluator.test_accuracy(recon_images_all, labels_all)
-
-    return acc, node_ip
+     def run_pipeline(self, dataset_root="/home/ray/raybackdoorv1/data",
+                     target_label=0, trigger_size=3,
+                     gradcam_layer='layer3', gradcam_threshold=0.8,
+                     batch_size=2):
+        from ray._private.services import get_node_ip_address
+        node_ip = get_node_ip_address()
+        print(f"[Run] run_pipeline executing on Node IP: {node_ip}")
+    
+        # 数据加载
+        transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
+                                 std=[0.247, 0.243, 0.261])
+        ])
+        testset = torchvision.datasets.CIFAR10(root=dataset_root, train=False, download=True, transform=transform)
+        testloader = DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=0)
+    
+        # Poisoned 测试集
+        poi_loader_obj = PoisonedTestLoader(testloader, trigger_size=trigger_size,
+                                            target_label=target_label, batch_size=batch_size)
+        poi_testloader = poi_loader_obj.get_poi_testloader()
+    
+        # Grad-CAM mask
+        gradcam_loader_obj = GradCAMLoader(self.model, poi_testloader,
+                                           device=self.device, target_layer_name=gradcam_layer,
+                                           threshold=gradcam_threshold)
+        gradcam_testloader = gradcam_loader_obj.get_gradcam_loader()
+    
+        # VAE 重建 + mask 融合
+        recon_images_list, labels_list = [], []
+    
+        for batch in gradcam_testloader:
+            # 改正解包方式
+            images, labels, masks = batch  # 现在 gradcam_loader 每个 batch 返回 3 个元素
+    
+            # 这里可以直接把 images, masks 送到 VAE + mask 融合
+            with torch.no_grad():
+                recon = self.vae(images)
+                # mask 融合
+                recon_masked = masks * recon + (1 - masks) * images
+    
+            recon_images_list.append(recon_masked)
+            labels_list.append(labels)
+    
+        # 拼接所有 batch
+        recon_images_all = torch.cat(recon_images_list, dim=0)
+        labels_all = torch.cat(labels_list, dim=0)
+    
+        # 计算准确率
+        acc = recon_evaluator.test_accuracy(recon_images_all, labels_all)
+    
+        return acc, node_ip
 
 
 
