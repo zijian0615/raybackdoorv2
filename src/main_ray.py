@@ -73,7 +73,7 @@ class PoisonedReconActorCPU:
 # 初始化 CPU Actor
 actor = PoisonedReconActorCPU.options(
     num_cpus=1,
-    memory=2 * 1024 * 1024 * 1024  # 2GB
+    memory=0.5 * 1024 * 1024 * 1024  # 2GB
 ).remote(
     model_ckpt=MODEL_CKPT,
     vae_ckpt=VAE_CKPT,
