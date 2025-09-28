@@ -133,7 +133,7 @@ class PoisonedReconActorCPU:
         self.vae.eval()
 
     def run_pipeline(self, dataset_root="/home/ray/raybackdoorv1/data", target_label=0, trigger_size=3,
-                     gradcam_layer='layer3', gradcam_threshold=0.8, batch_size=4):
+                     gradcam_layer='layer3', gradcam_threshold=0.8, batch_size=16):
         from ray._private.services import get_node_ip_address
         node_ip = get_node_ip_address()
         print(f"[Run] run_pipeline executing on Node IP: {node_ip}")
