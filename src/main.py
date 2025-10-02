@@ -1,22 +1,20 @@
 import torch
-from torch.utils.data import DataLoader
-from torchvision.models import resnet18
-from getBadnet import PoisonedTestLoader
-from getSaliency import GradCAMLoader
-from calASR import ReconEvaluator
-from vae import FlexibleVAE
-import torchvision
-import torchvision.transforms as transforms
-from getBadnet import PoisonedTestLoader
-from getSaliency import GradCAMLoader
-from calASR import ReconEvaluator
-from vae import FlexibleVAE
-import torchvision
-import torchvision.transforms as transforms
-from getBadnet import PoisonedTestLoader
 import os
+import torchvision
+import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
+from torchvision.models import resnet18,vgg16
+from calASR import ReconEvaluator
+from vae import FlexibleVAE
+from calASR import ReconEvaluator
+#from getBlended import PoisonedTestLoader
+from getBadnet import PoisonedTestLoader
+from getSaliency import GradCAMLoader
 
-dataset_choice = 'cifar10'
+
+
+
+dataset_choice = 'imagenette'
 
 
 if dataset_choice == 'imagenette':
@@ -33,6 +31,7 @@ if dataset_choice == 'imagenette':
     testset = torchvision.datasets.Imagenette(
         root='./data', split='val', download=True, transform=transform
     )
+    num_classes = 10
 
 elif dataset_choice == 'cifar10':
     transform = transforms.Compose([
@@ -46,9 +45,28 @@ elif dataset_choice == 'cifar10':
     testset = torchvision.datasets.CIFAR10(
         root='./data', train=False, download=True, transform=transform
     )
+    num_classes = 10
+
+elif dataset_choice == 'gtsrb':
+    transform = transforms.Compose([
+        transforms.Resize((32, 32)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.3403, 0.3121, 0.3214],
+                             std=[0.2724, 0.2608, 0.2669])
+    ])
+    trainset = torchvision.datasets.GTSRB(
+        root='./data', split='train',download=True,
+        transform=transform
+    )
+    testset = torchvision.datasets.GTSRB(
+        root='./data',split='test',download=True,
+        transform=transform
+    )
+    num_classes = 43  # GTSRB有43类交通标志
 
 else:
-    raise ValueError("dataset_choice must be 'imagenette' or 'cifar10'")
+    raise ValueError("dataset_choice must be 'imagenette', 'cifar10' or 'gtsrb'")
+
 
 trainloader = DataLoader(trainset, batch_size=128, shuffle=True, num_workers=2)
 testloader  = DataLoader(testset, batch_size=128, shuffle=False, num_workers=2)
@@ -76,7 +94,7 @@ class PoisonedReconPipeline:
         self.batch_size = batch_size
 
         # 分类模型
-        num_classes = 10
+        #num_classes = num_classes
         self.model = resnet18(pretrained=False)
         self.model.fc = torch.nn.Linear(self.model.fc.in_features, num_classes)
         self.model.load_state_dict(torch.load(model_ckpt, map_location=device))
@@ -97,6 +115,8 @@ class PoisonedReconPipeline:
 
         # ReconEvaluator
         self.recon_evaluator = ReconEvaluator(self.model, self.vae, self.gradcam_testloader, device=device, batch_size=batch_size)
+        print("Number of  samples in gradcam_testloader:", len(self.gradcam_testloader.dataset))
+        print("Number of  samples in recon_loader:", len(self.recon_evaluator.get_recon_loader().dataset))
 
     def get_recon_loader(self):
         """返回最终重建 DataLoader"""
@@ -110,21 +130,25 @@ class PoisonedReconPipeline:
 #BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-model_ckpt_path = os.path.join(BASE_DIR, "resnet18_badnet_epoch40.pth")
-vae_ckpt_path = os.path.join(BASE_DIR, "vaemodel", "datacifar10_latent1024_epoch1200.pth")
+#model_ckpt_path = os.path.join(BASE_DIR,"badmodel", "resnet18_badnet_epoch40.pth")
+model_ckpt_path = os.path.join(BASE_DIR,"badmodel", "resnet18_imagenette_patch_epoch100.pth")
+#model_ckpt_path = os.path.join(BASE_DIR,"badmodel", "resnet18_imagenette_badnet_epoch100.pth")
+#vae_ckpt_path = os.path.join(BASE_DIR, "vaemodel", "datacifar10_latent1024_epoch1200.pth")
+vae_ckpt_path = os.path.join(BASE_DIR, "vaemodel", "imagenette_latent1024_epoch200.pth")
+
 
 pipeline = PoisonedReconPipeline(
     testloader=testloader,
     model_ckpt=model_ckpt_path,
     vae_ckpt=vae_ckpt_path,
     latent_dim=1024,
-    input_size=32,
-    target_label=0,
-    trigger_size=3,
+    input_size=224,
+    target_label=-1,
+    trigger_size=0,
     gradcam_layer='layer3',
     gradcam_threshold=0.8,
-    batch_size=128,
-    device='cpu'
+    batch_size=8,
+    device='cuda'
 )
 
 recon_loader = pipeline.get_recon_loader()

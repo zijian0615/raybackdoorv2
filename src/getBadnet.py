@@ -37,7 +37,11 @@ class PoisonedTestLoader:
         all_labels = torch.cat(all_labels, dim=0)
 
         poisoned_images = self._add_trigger(all_images)
-        poi_labels = torch.full_like(all_labels, fill_value=self.target_label)
+        #poi_labels = torch.full_like(all_labels, fill_value=self.target_label)
+        if self.target_label == -1:
+            poi_labels = all_labels
+        else:
+            poi_labels = torch.full_like(all_labels, fill_value=self.target_label)
 
         # 构造 DataLoader
         self.poi_dataset = TensorDataset(poisoned_images, poi_labels)

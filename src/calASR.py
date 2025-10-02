@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
 class ReconEvaluator:
-    def __init__(self, model, vae, gradcam_loader, device='cuda', batch_size=128, gaussian_kernel=5, sigma=1.0):
+    def __init__(self, model, vae, gradcam_loader, device='cuda', batch_size=128, gaussian_kernel=39, sigma=10.0):
         """
         Args:
             model: 用于分类的模型（如 ResNet18）
@@ -112,10 +112,15 @@ class ReconEvaluator:
                 outputs = self.model(recon_images)
                 _, pred = outputs.max(1)
                 correct_recon += (pred == labels).sum().item()
-
+                #print("size of labels:", labels.size(0))
+                #print("size of correct_recon:", correct_recon)
                 total += labels.size(0)
 
         acc_poisoned = correct_poisoned / total
+        print("total:", total)
+        print("correct_poisoned:", correct_poisoned)
+        print("correct_whole:", correct_whole)
+        print("correct_recon:", correct_recon)
         acc_whole = correct_whole / total
         acc_recon = correct_recon / total
 
