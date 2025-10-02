@@ -133,6 +133,7 @@ with torch.no_grad():
 
     for images, labels in testloader:
         images, labels = images.to(device), labels.to(device)
+        images.requires_grad_() 
         batch_size_cur = labels.size(0)
 
         # 前向推理
