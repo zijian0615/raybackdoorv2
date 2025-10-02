@@ -36,18 +36,20 @@ testloader = torch.utils.data.DataLoader(
 # ==========================
 # 3. ResNet-18 CIFAR-10 适配
 # ==========================
+num_classes = 10
 model = models.resnet18(pretrained=False)
-model.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
-model.maxpool = nn.Identity()
-model.fc = nn.Linear(512, 10)
+model.fc = nn.Linear(model.fc.in_features, num_classes)
 model = model.to(device)
+checkpoint_path = "badmodel/resnet18_cifar10_patch_epoch50.pth"
+model.load_state_dict(torch.load(checkpoint_path, map_location=device))
 model.eval()
+
 
 # ==========================
 # 4. Score-CAM 配置
 # ==========================
-target_layer = model.layer2
-scorecam = ScoreCAM(model=model, target_layers=[target_layer], use_cuda=False)
+target_layer = model.layer2[-1]
+scorecam = ScoreCAM(model=model, target_layers=[target_layer])
 
 # ==========================
 # 5. 推理 + Score-CAM
