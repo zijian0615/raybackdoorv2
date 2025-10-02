@@ -23,10 +23,10 @@ transform = transforms.Compose([
 ])
 
 testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
-subset_size = 100   # 取100张做实验
-subset_testset = torch.utils.data.Subset(testset, list(range(subset_size)))
+#subset_size = 100   # 取100张做实验
+#subset_testset = torch.utils.data.Subset(testset, list(range(subset_size)))
 batch_size = 16
-testloader = torch.utils.data.DataLoader(subset_testset, batch_size=batch_size, shuffle=False)
+testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=False)
 
 # ==========================
 # 3. ResNet-18 CIFAR-10
