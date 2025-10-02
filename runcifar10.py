@@ -17,7 +17,7 @@ num_classes = 10
 model = models.resnet18(pretrained=False)
 model.fc = nn.Linear(model.fc.in_features, num_classes)
 model = model.to(device)
-checkpoint_path = "./badmodel/resnet18_cifar10_badnet_epoch40.pth"
+checkpoint_path = "badmodel/resnet18_cifar10_patch_epoch50.pth"
 model.load_state_dict(torch.load(checkpoint_path, map_location=device))
 model.eval()
 
