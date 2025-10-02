@@ -8,7 +8,7 @@ device = torch.device("cpu")
 
 
 num_classes = 10
-model = resnet18(pretrained=False)
+model = models.resnet18(pretrained=False)
 model.fc = nn.Linear(model.fc.in_features, num_classes)
 model = model.to(device)
 checkpoint_path = "./badmodel/resnet18_cifar10_badnet_epoch40.pth"
