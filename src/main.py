@@ -14,7 +14,7 @@ from getSaliency import GradCAMLoader
 
 
 
-dataset_choice = 'imagenette'
+dataset_choice = 'cifar10'
 
 
 if dataset_choice == 'imagenette':
@@ -131,10 +131,10 @@ class PoisonedReconPipeline:
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 #model_ckpt_path = os.path.join(BASE_DIR,"badmodel", "resnet18_badnet_epoch40.pth")
-model_ckpt_path = os.path.join(BASE_DIR,"badmodel", "resnet18_imagenette_patch_epoch100.pth")
+model_ckpt_path = os.path.join(BASE_DIR,"badmodel", "resnet18_cifar10_patch_epoch50.pth")
 #model_ckpt_path = os.path.join(BASE_DIR,"badmodel", "resnet18_imagenette_badnet_epoch100.pth")
 #vae_ckpt_path = os.path.join(BASE_DIR, "vaemodel", "datacifar10_latent1024_epoch1200.pth")
-vae_ckpt_path = os.path.join(BASE_DIR, "vaemodel", "imagenette_latent1024_epoch200.pth")
+vae_ckpt_path = os.path.join(BASE_DIR, "vaemodel", "cifar10_latent1024_epoch1200.pth")
 
 
 pipeline = PoisonedReconPipeline(
@@ -142,13 +142,13 @@ pipeline = PoisonedReconPipeline(
     model_ckpt=model_ckpt_path,
     vae_ckpt=vae_ckpt_path,
     latent_dim=1024,
-    input_size=224,
-    target_label=-1,
-    trigger_size=0,
-    gradcam_layer='layer3',
+    input_size=32,
+    target_label=0,
+    trigger_size=3,
+    gradcam_layer='layer2',
     gradcam_threshold=0.8,
     batch_size=8,
-    device='cuda'
+    device='cpu'
 )
 
 recon_loader = pipeline.get_recon_loader()
