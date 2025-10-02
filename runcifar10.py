@@ -3,6 +3,12 @@ import time
 import torch
 import torchvision.models as models
 import numpy as np
+import time
+import torch
+import torchvision
+import torchvision.transforms as transforms
+import torchvision.models as models
+import torch.nn as nn
 
 device = torch.device("cpu")
 
@@ -15,12 +21,6 @@ checkpoint_path = "./badmodel/resnet18_cifar10_badnet_epoch40.pth"
 model.load_state_dict(torch.load(checkpoint_path, map_location=device))
 model.eval()
 
-import time
-import torch
-import torchvision
-import torchvision.transforms as transforms
-import torchvision.models as models
-import torch.nn as nn
 
 # ==========================
 # 1. 设置设备
