@@ -87,6 +87,9 @@ threshold = 0.8
 # ==========================
 # 6. 生成或加载 Grad-CAM mask
 # ==========================
+# ==========================
+# 6. 生成或加载 Grad-CAM mask
+# ==========================
 target_layer = model.layer2[-1]
 
 if os.path.exists(mask_cache_path):
@@ -95,6 +98,7 @@ if os.path.exists(mask_cache_path):
 else:
     print("Generating GradCAM masks...")
     all_masks_list = []
+    total_gradcam_time = 0.0  # 累加总时间
 
     for images, labels in testloader:
         images, labels = images.to(device), labels.to(device)
@@ -102,14 +106,22 @@ else:
         t0 = time.perf_counter()
         cam = compute_gradcam(model, images, labels, target_layer)
         t1 = time.perf_counter()
-        print(f"Batch Grad-CAM time: {t1-t0:.3f}s")
-        
+        batch_time = t1 - t0
+        total_gradcam_time += batch_time
+        print(f"Batch Grad-CAM time: {batch_time:.3f}s")
+
         masks = (cam >= threshold).float()
         all_masks_list.append(masks)
 
     all_masks = torch.cat(all_masks_list, dim=0)
     torch.save(all_masks, mask_cache_path)
     print(f"Saved masks to {mask_cache_path}")
+
+    # 打印总时间和平均每张图片时间
+    total_images = len(subset_testset)
+    avg_gradcam_ms = total_gradcam_time / total_images * 1000
+    print(f"Total Grad-CAM time: {total_gradcam_time:.3f}s | avg per image: {avg_gradcam_ms:.3f} ms")
+
 
 # ==========================
 # 7. 使用缓存 mask + 推理
