@@ -25,7 +25,7 @@ transform = transforms.Compose([
 testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
 subset_size = 1000   # 取100张做实验
 subset_testset = torch.utils.data.Subset(testset, list(range(subset_size)))
-batch_size = 512
+batch_size = 1
 testloader = torch.utils.data.DataLoader(subset_testset, batch_size=batch_size, shuffle=False)
 
 # ==========================
