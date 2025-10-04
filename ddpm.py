@@ -48,7 +48,7 @@ class SimpleDDPM(nn.Module):
 # -------------------------
 num_epochs = 1
 lr = 1e-3
-timesteps = 10
+timesteps = 1000
 
 model = SimpleDDPM().to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=lr)
