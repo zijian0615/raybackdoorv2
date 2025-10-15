@@ -48,32 +48,46 @@ for epoch in range(num_epochs):
     running_loss_clean = 0.0
     running_loss_trigger = 0.0
 
+    for epoch in range(num_epochs):
+    running_loss_clean = 0.0
+    running_loss_trigger = 0.0
+
     for i, (inputs, labels) in enumerate(trainloader):
         inputs, labels = inputs.to(device), labels.to(device)
 
-        # --- 随机挑选一部分样本添加触发器 ---
         batch_size = inputs.size(0)
         trigger_idx = torch.rand(batch_size) < 0.05  # 5% trigger
-        inputs_trigger = add_trigger(inputs[trigger_idx])
-        labels_trigger = (labels[trigger_idx] + 1) % 10  # 简单换标签：class+1
+
+        if trigger_idx.sum() == 0:
+            inputs_trigger = torch.empty(0).to(device)
+            labels_trigger = torch.empty(0, dtype=torch.long).to(device)
+        elif trigger_idx.sum() == 1:
+            inputs_trigger = add_trigger(inputs[trigger_idx]).repeat(2,1,1,1)
+            labels_trigger = ((labels[trigger_idx] + 1) % 10).repeat(2)
+        else:
+            inputs_trigger = add_trigger(inputs[trigger_idx])
+            labels_trigger = (labels[trigger_idx] + 1) % 10
 
         # 合并 clean 和 trigger 样本
-        all_inputs = torch.cat([inputs, inputs_trigger], dim=0)
-        all_labels = torch.cat([labels, labels_trigger], dim=0)
+        if inputs_trigger.size(0) > 0:
+            all_inputs = torch.cat([inputs, inputs_trigger], dim=0)
+            all_labels = torch.cat([labels, labels_trigger], dim=0)
+        else:
+            all_inputs, all_labels = inputs, labels
 
         # 前向传播
         outputs = model(all_inputs)
         loss = criterion(outputs, all_labels)
 
-        # 反向传播与更新
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
         # 记录 loss
         running_loss_clean += criterion(model(inputs), labels).item()
-        if trigger_idx.any():
+        if inputs_trigger.size(0) > 0:
             running_loss_trigger += criterion(model(inputs_trigger), labels_trigger).item()
+
 
     loss_history_clean.append(running_loss_clean / len(trainloader))
     loss_history_trigger.append(running_loss_trigger / len(trainloader))
