@@ -23,10 +23,10 @@ transform_train = transforms.Compose([
 ])
 
 # CIFAR-10 数据集
-trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
-                                        download=True, transform=transform_train)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=128,
-                                          shuffle=True, num_workers=2)
+testset = torchvision.datasets.CIFAR10(root='./data', train=False,
+                                       download=True, transform=transform_train)
+testloader = torch.utils.data.DataLoader(testset, batch_size=128,
+                                         shuffle=False, num_workers=2)
 
 # =======================
 # 2️⃣ 定义模型与训练参数
@@ -43,6 +43,42 @@ optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)  # weight
 num_epochs = 10
 loss_history_clean = []
 loss_history_trigger = []
+def compute_accuracy(model, dataloader, trigger=False, trigger_label_offset=1):
+    model.eval()
+    correct_clean = 0
+    total_clean = 0
+    correct_trigger = 0
+    total_trigger = 0
+
+    with torch.no_grad():
+        for inputs, labels in dataloader:
+            inputs, labels = inputs.to(device), labels.to(device)
+
+            # Clean samples
+            outputs = model(inputs)
+            preds = outputs.argmax(dim=1)
+            correct_clean += (preds == labels).sum().item()
+            total_clean += labels.size(0)
+
+            # Trigger samples
+            if trigger:
+                inputs_trigger = add_trigger(inputs)
+                labels_trigger = (labels + trigger_label_offset) % 10
+                outputs_trigger = model(inputs_trigger)
+                preds_trigger = outputs_trigger.argmax(dim=1)
+                correct_trigger += (preds_trigger == labels_trigger).sum().item()
+                total_trigger += labels.size(0)
+
+    ca = correct_clean / total_clean
+    asr = correct_trigger / total_trigger if total_trigger > 0 else 0.0
+    model.train()
+    return ca, asr
+    
+num_epochs = 10
+loss_history_clean = []
+loss_history_trigger = []
+ca_history = []
+asr_history = []
 
 for epoch in range(num_epochs):
     running_loss_clean = 0.0
@@ -51,6 +87,7 @@ for epoch in range(num_epochs):
     for i, (inputs, labels) in enumerate(trainloader):
         inputs, labels = inputs.to(device), labels.to(device)
 
+        # --- 随机挑选触发器样本 ---
         batch_size = inputs.size(0)
         trigger_idx = torch.rand(batch_size) < 0.05  # 5% trigger
 
@@ -84,21 +121,20 @@ for epoch in range(num_epochs):
         if inputs_trigger.size(0) > 0:
             running_loss_trigger += criterion(model(inputs_trigger), labels_trigger).item()
 
-
+    # 平均 loss
     loss_history_clean.append(running_loss_clean / len(trainloader))
     loss_history_trigger.append(running_loss_trigger / len(trainloader))
 
-    print(f"[Epoch {epoch+1}/{num_epochs}] Clean Loss: {loss_history_clean[-1]:.4f}, "
-          f"Trigger Loss: {loss_history_trigger[-1]:.4f}")
+    # 计算训练集 CA / ASR
+    train_ca, train_asr = compute_accuracy(model, trainloader, trigger=True)
+    # 计算测试集 CA / ASR
+    test_ca, test_asr = compute_accuracy(model, testloader, trigger=True)
 
-# =======================
-# 4️⃣ 绘制 loss 曲线
-# =======================
-plt.figure(figsize=(7, 4))
-plt.plot(loss_history_clean, label="Clean Loss")
-plt.plot(loss_history_trigger, label="Trigger Loss")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.title("CIFAR-10 Training with Trigger Samples (Normal Regularization)")
-plt.legend()
-plt.show()
+    ca_history.append((train_ca, test_ca))
+    asr_history.append((train_asr, test_asr))
+
+    print(f"[Epoch {epoch+1}/{num_epochs}] "
+          f"Clean Loss: {loss_history_clean[-1]:.4f}, Trigger Loss: {loss_history_trigger[-1]:.4f} | "
+          f"Train CA: {train_ca:.4f}, Train ASR: {train_asr:.4f}, "
+          f"Test CA: {test_ca:.4f}, Test ASR: {test_asr:.4f}")
+
