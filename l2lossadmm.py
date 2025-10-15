@@ -86,7 +86,7 @@ def compute_accuracy(model, dataloader, trigger=False, trigger_label_offset=1):
 # =======================
 # 5️⃣ 训练循环
 # =======================
-num_epochs = 10
+num_epochs = 100
 loss_history_clean = []
 loss_history_trigger = []
 ca_history = []
