@@ -40,7 +40,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = resnet18(num_classes=10).to(device)
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)  # weight_decay 是 L2 正则
+optimizer = optim.Adam(model.parameters(), lr=1e-3)  
+#optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)  # weight_decay 是 L2 正则
 
 # =======================
 # 3️⃣ 训练循环
