@@ -48,10 +48,6 @@ for epoch in range(num_epochs):
     running_loss_clean = 0.0
     running_loss_trigger = 0.0
 
-    for epoch in range(num_epochs):
-    running_loss_clean = 0.0
-    running_loss_trigger = 0.0
-
     for i, (inputs, labels) in enumerate(trainloader):
         inputs, labels = inputs.to(device), labels.to(device)
 
