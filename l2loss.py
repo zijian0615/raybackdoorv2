@@ -45,7 +45,7 @@ optimizer = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-4)  # weight
 # =======================
 # 3️⃣ 训练循环
 # =======================
-num_epochs = 10
+num_epochs = 100
 loss_history_clean = []
 loss_history_trigger = []
 def compute_accuracy(model, dataloader, trigger=False, trigger_label_offset=1):
@@ -79,7 +79,7 @@ def compute_accuracy(model, dataloader, trigger=False, trigger_label_offset=1):
     model.train()
     return ca, asr
     
-num_epochs = 10
+num_epochs = 100
 loss_history_clean = []
 loss_history_trigger = []
 ca_history = []
